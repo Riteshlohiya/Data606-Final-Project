@@ -1,0 +1,202 @@
+---
+title: "Data606 Final Project"
+author: "Ritesh Lohiya"
+date: "May 12, 2018"
+output: html_document
+---
+
+### Part 1 - Introduction:
+
+For this final Data606 project, i have selected to study and analyze if the genre and RotTom(Rotten Tomatoes ratings) of a movie has any affect on the gross collection. Gross Collection(Gross_Collection) is the response variable which is numerical. Genre is the explanatory variable which is categorical. RotTom is another explanatory variable which is numerical ordinal. Each case represents the movie details. The dataset has 227 observations. The data is collected from StatCrunch website link for which is given below. The RomTom ratings are taken from Rotten Tomatoes. The collected data is then stored in GitHub repository: https://raw.githubusercontent.com/Riteshlohiya/Data606_Project_Proposal/master/movies_2008_V1.csv
+
+Link for StatCrunch: https://www.statcrunch.com/app/index.php?dataid=398031
+
+Link for Rotten Tomatoes ratings: https://www.kaggle.com/tmdb/tmdb-movie-metadata/data
+
+
+#Load Libraries:
+
+```{r}
+library(knitr)
+library(stringr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+```
+
+### Part 2 - Data:
+
+The data is collected from StatCrunch website link for which is given below. The RomTom ratings are taken from Rotten Tomatoes. The collected data is then stored in GitHub repository: https://raw.githubusercontent.com/Riteshlohiya/Data606_Project_Proposal/master/movies_2008_V1.csv
+
+
+```{r}
+movies_2008 <- read.csv("https://raw.githubusercontent.com/Riteshlohiya/Data606_Project_Proposal/master/movies_2008_V1.csv", sep=",")
+head(movies_2008)
+dim(movies_2008)
+```
+
+```{r}
+movies_2008 <- as.data.frame(movies_2008) 
+```
+
+### Part 3 - Exploratory data analysis:
+
+#Relevant summary statistics
+
+```{r}
+summary(movies_2008)
+```
+
+```{r}
+movies_Genre <- table(movies_2008$Genre) 
+```
+
+```{r}
+par(oma = c(1,1,1,1))
+par(mar = c(4,5,2,1))
+barplot(movies_Genre[order(movies_Genre)],
+        horiz = TRUE,
+        las = 1,
+        col = c(rainbow(6)),
+        border = NA,
+        main = "Frequency of Movie Genre",
+        xlab = "Count",
+        font.lab = 2,
+        cex.names = 0.75)
+        
+```
+
+#Genre Boxplot:
+
+```{r}
+ggplot(movies_2008,aes(x=Genre,y=Gross_Collection)) + geom_boxplot()
+```
+
+
+#Gross_Collection Boxplot:
+```{r}
+ggplot(movies_2008, aes(x = Gross_Collection)) + 
+  geom_histogram(aes(y = ..density..),
+                   colour = "black", fill = "white") +
+  geom_density(alpha = .2, fill = "#FF6666")+
+  geom_vline(aes(xintercept = mean(Gross_Collection)),
+             linetype = "dashed", size = 1, colour = "red")
+```
+
+The Gross_Collection histogram is right skewed, so it may be more useful to use the median as average Gross_Collection, since in the histogram above, the mean does not appear to fully represent where most of the data lies.
+
+
+
+#RotTom Ratings Histogram:
+
+```{r}
+ggplot(movies_2008, aes(x=RotTom)) + geom_histogram()
+```
+
+#Summary of the data for Gross_Collection by Genre:
+
+```{r}
+movies_2008_Gross_Collection  <- movies_2008 %>% 
+  group_by(Genre) 
+
+movies_2008_Gross_Collection <- summarise(
+  movies_2008_Gross_Collection,
+  count = n(),
+  mean_collection = mean(Gross_Collection),
+  sd_collection = sd(Gross_Collection),
+  max_collection = max(Gross_Collection)
+  
+)
+
+movies_2008_Gross_Collection
+```
+
+#Summary of the data for RotTom Ratings by Genre:
+
+```{r}
+movies_2008_RotTom  <- movies_2008 %>% 
+  group_by(Genre) 
+
+movies_2008_RotTom <- summarise(
+  movies_2008_RotTom,
+  count = n(),
+  mean_RotTom = mean(RotTom),
+  sd_RotTom = sd(RotTom),
+  max_RotTom= max(RotTom)
+  
+)
+
+movies_2008_RotTom
+```
+
+
+### Part 4 - Inference:
+
+Regression:
+
+In order to determine if genre and RotTom(Rotten Tomatoes ratings) of a movie has any affect on the gross collection, we must run a multiple regression. We must first determine if the all the assumptions are met (independence, normality and homoscedasticity) and then determine.
+
+Assumptions:
+
+Since each case is a different movie and ranking, we can assume that each case is independent from any other.
+
+```{r}
+#Mutliple Regression
+# Normality
+gcreg = lm(Gross_Collection ~ RotTom + Genre, data = movies_2008)
+qqnorm(gcreg$residuals)
+qqline(gcreg$residuals)
+```
+  
+Looking at the QQ plot we can assume normality as the most dots are near the line. 
+
+```{r}
+# Homoscedasticity
+plot(gcreg$residuals)
+abline(h = 0, lty = 3)
+```
+
+The residuals plot shows even variance throughout and around the zero line, so the homoscedasticity assumption is also met.
+
+All the 3 assumptions are met so generated the below summary.
+
+```{r}
+summary(gcreg)
+```
+
+The r-squared and adjusted r-squared value for this model are low (18% and 16%), meaning that this linear regression does not explain very well the variability. But we can say both RotTom and Genre variables are deemed significant.
+
+I also tried Anova test for Genre.
+
+```{r}
+ggplot(movies_2008,aes(x=Genre,y=Gross_Collection)) + geom_boxplot(aes(fill=Genre)) + xlab("") +  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+```
+
+```{r}
+Genre_anova <- aov(movies_2008$Gross_Collection ~ movies_2008$Genre)
+summary(Genre_anova)
+```
+
+### Part 5 - Conclusion:
+
+For the question of whether Genre and RotTom(Rotten Tomatoes ratings) of a movie has any affect on the gross collection, we have determined that they are significant. However as a variable in a linear regression, they did not explain the rating as The r-squared and adjusted r-squared value for this model are low (18% and 16%).
+
+### References:
+
+The data is collected from StatCrunch website link for which is given below. The RomTom ratings are taken from Rotten Tomatoes. The collected data is then stored in GitHub repository: https://raw.githubusercontent.com/Riteshlohiya/Data606_Project_Proposal/master/movies_2008_V1.csv
+
+Link for StatCrunch: https://www.statcrunch.com/app/index.php?dataid=398031
+
+Link for Rotten Tomatoes ratings: https://www.kaggle.com/tmdb/tmdb-movie-metadata/data
+
+
+
+
+
+
+
+
+
+
